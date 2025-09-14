@@ -1,7 +1,8 @@
 import streamlit as st
 import requests
 
-BACKEND_URL = "http://localhost:8000/run_agent"
+# BACKEND_URL = "http://localhost:8000/run_agent" for local testing
+BACKEND_URL = "https://groq-multi-tool-agent-with-lanchain.onrender.com/run_agent"
 
 st.set_page_config(page_title="Agentic Multi-Tool Assistant")
 st.title("🤖 Agentic Multi-Tool Assistant (LangChain + Groq)")
