@@ -3,47 +3,72 @@ from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from tools import calculator_tool, summarize_tool, search_tool
+from tools import calculator, wikipedia, tavily_search
 
 load_dotenv()
 
 os.environ["GROQ_API_KEY"] = os.getenv("GROQ_API_KEY", "YOUR_GROQ_API_KEY_HERE")
 
-llm = init_chat_model("llama-3.1-8b-instant", model_provider="groq", temperature=0)
+tools = [calculator, wikipedia, tavily_search]
+llm = init_chat_model("meta-llama/llama-4-scout-17b-16e-instruct", model_provider="groq", temperature=0)
+
 
 def pick_tool_and_run(query: str, prefer_tool: str = None):
-    print(prefer_tool)
-    # Naive pattern matching to pick tool
-    if prefer_tool:
-        tool = prefer_tool.lower()
-    elif any(word in query.lower() for word in ["add", "plus", "times", "+", "-", "*", "/", "calculate", "sqrt", "square"]):
-        tool = "calculator"
-    elif "summarize" in query.lower():
-        tool = "summarizer"
-    elif "search" in query.lower() or "who is" in query.lower() or "what is" in query.lower():
-        tool = "search"
-    else:
-        tool = "llm"
 
-    steps = []
-    if tool == "calculator":
-        expr = query.replace("What is", "").replace("?", "").strip()
-        print(expr)
-        result = calculator_tool(expr)
-        steps.append({"description": f"Ran calculator on '{expr}'", "result": result})
-    elif tool == "summarizer":
-        result = summarize_tool(query)
-        steps.append({"description": f"Ran summarizer", "result": result})
-    elif tool == "search":
-        result = search_tool(query)
-        steps.append({"description": f"Ran search", "result": result})
-    else:
-        # Fallback: Use Groq LLM with chat prompt
-        prompt = [
-            SystemMessage(content="You are a general assistant."),
+    if prefer_tool == "Groq AI":
+        messages = [
+            SystemMessage("""you are a helpful AI assistant, Provice concise and accurate answers with a maximum of 700 characters. 
+                          If you don't know the answer, just say that you don't know, don't try to make up an answer.
+                          If you notice multiple parts in the question, suggest using a tool to answer the question."""),
             HumanMessage(content=query)
         ]
-        response = llm.invoke(prompt)
-        result = response.content
-        steps.append({"description": f"Ran Groq LLM", "result": result})
-    return tool, steps, steps[-1]["result"]
+        res_llm = llm.invoke(messages)
+        return ["Used Groq without any tool"], f"Sure! I am a Groq LLM. {res_llm.content}"
+
+    llm_with_tools = llm.bind_tools(tools)
+    
+    messages = [HumanMessage(content=query)]
+    ai_msg = llm_with_tools.invoke(messages)
+
+    messages.append(ai_msg)
+
+    tool_used =[]
+    
+    # First, run preferred tool(s) if
+    try:
+        if prefer_tool:
+            for tool_call in ai_msg.tool_calls:
+                tool_name = tool_call["name"].lower()
+                if tool_name == prefer_tool.lower():
+                    tool_used.append(f"Used {tool_name} with {tool_call['args']}")
+                    selected_tool = {
+                        "calculator": calculator,
+                        "wikipedia": wikipedia,
+                        "tavily_search": tavily_search
+                    }[tool_name]
+                    tool_msg = selected_tool.invoke(tool_call)
+            
+                    messages.append(tool_msg)
+
+        # Then run remaining tools (if any)
+        for tool_call in ai_msg.tool_calls:
+            tool_name = tool_call["name"].lower()
+            if prefer_tool and tool_name == prefer_tool.lower():
+                continue  # already ran
+            tool_used.append(f"Used {tool_name} with {tool_call['args']}")
+            selected_tool = {
+                "calculator": calculator,
+                "wikipedia": wikipedia,
+                "tavily_search": tavily_search
+            }[tool_name]
+            tool_msg = selected_tool.invoke(tool_call)
+            print("tool msg:", [tool_msg])
+            messages.append(tool_msg)
+
+        response = llm_with_tools.invoke(messages)
+    
+        return tool_used, response.content
+    
+    except Exception as e:
+        print("Error during tool execution:", str(e))
+        return [], f"Error: could not compute result - {str(e)}"

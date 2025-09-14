@@ -7,7 +7,7 @@ st.set_page_config(page_title="Agentic Multi-Tool Assistant")
 st.title("🤖 Agentic Multi-Tool Assistant (LangChain + Groq)")
 
 query = st.text_input("Ask me anything (calculation, summary, question):", "")
-prefer_tool = st.selectbox("Prefer a particular tool? (optional)", ["auto", "calculator", "summarizer", "search", "llm"]) # Add auto instead of "" in list
+prefer_tool = st.selectbox("Prefer a particular tool? (optional)", ["auto", "calculator", "wikipedia", "tavily_search", "Groq AI"]) # Add auto instead of "" in list
 
 if st.button("Run Agent"):
     with st.spinner("Thinking..."):
@@ -16,11 +16,13 @@ if st.button("Run Agent"):
         resp = requests.post(BACKEND_URL, json=payload, timeout=60)
         if resp.status_code == 200:
             data = resp.json()
-            st.success(f"Final answer: {data['answer']}")
-            st.divider()
-            st.subheader("Agent Steps:")
-            for step in data["steps"]:
-                st.write(f"**{step['description']}**\n\n→ {step['result']}")
-            st.info(f"Tool used: {data['tool_used']}")
+            if not data["tool_used"]:
+                st.error("oops! Agent could not use any tool. Try Auto.")
+            else:
+                st.success(f"Final answer: {data['answer']}")
+                st.divider()
+                st.subheader("Agent Steps:")
+                st.info(f"Tool used: {', '.join(data['tool_used'])}")
+            
         else:
             st.error(f"Error: {resp.status_code} - {resp.text}")

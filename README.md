@@ -1,6 +1,6 @@
 # Multi Tool Agent App
 
-This project is a simple and naive implementation of an AI Agent application that uses multiple tools. It is designed to demonstrate the basic concepts and functionality of integrating multiple tools into a cohesive application. While it is not optimized for production use, it serves as a great starting point for understanding the architecture and workflow of such systems.
+This project is a simple and naive implementation of a Groq AI Agent application that uses multiple tools, including a calculator (custom tool), Wikipedia, and Tavily Search. It is built using FastAPI and LangChain for the backend, with a Streamlit-based frontend UI. The application is designed to demonstrate the basic concepts and functionality of integrating multiple tools into a cohesive application. While it is not optimized for production use, it serves as a great starting point for understanding the architecture and workflow of such systems.
 
 ## Project Structure
 
@@ -19,9 +19,9 @@ The project is divided into two main components:
 
 ## Features
 
-- Basic integration of multiple tools.
-- Simple backend and frontend setup.
-- Demonstrates the use of FastAPI for backend development.
+- Integration of multiple tools: calculator (custom tool), Wikipedia, and Tavily Search.
+- Built using FastAPI and LangChain for backend development.
+- Streamlit-based frontend UI for user interaction.
 - Provides a minimalistic example for learning and experimentation.
 
 ## Limitations
